@@ -10,8 +10,23 @@ This project uses fake money only.
 - No real brokerage connections
 - No real orders
 - No financial advice
-- Mock market data works immediately
+- Live market data is used only for research and simulated paper trades
 - The `20%` daily target is displayed only as an unrealistic stretch target, not an expectation or guarantee
+
+## Live Market Data Requirement
+
+The app is configured for live-data-only mode. It does not fall back to mock prices.
+
+You must add a Polygon API key in Vercel:
+
+```text
+POLYGON_API_KEY=your_polygon_key_here
+LIVE_DATA_MAX_AGE_MINUTES=5
+```
+
+A real-time Polygon plan is required for truly live U.S. stock data. If the newest returned bar is older than `LIVE_DATA_MAX_AGE_MINUTES`, the app blocks it and shows an error rather than treating delayed or stale data as live.
+
+Crypto symbols such as `BTC`, `ETH`, `SOL`, and `DOGE` are mapped to Polygon crypto tickers like `X:BTCUSD`. Stock symbols such as `AAPL`, `MSFT`, `NVDA`, and `TSLA` are sent directly to Polygon.
 
 ## Features
 
@@ -34,6 +49,7 @@ This project uses fake money only.
 - JSON storage
 - API routes
 - Lucide icons
+- Polygon market data
 
 ## Getting Started
 
@@ -43,16 +59,10 @@ Install dependencies:
 npm install
 ```
 
-Run locally:
+Run locally only if you intentionally want a local development server:
 
 ```bash
 npm run dev
-```
-
-Open:
-
-```text
-http://localhost:3000
 ```
 
 Build for production:
@@ -86,7 +96,7 @@ data/paper-account.json
 The engine:
 
 - Tracks paper cash and simulated trades
-- Values open positions using mock prices
+- Values open positions using live market data
 - Calculates realized and unrealized P/L
 - Calculates daily P/L and daily goal progress
 - Calculates win rate from closed simulated trades
@@ -113,33 +123,30 @@ It studies:
 
 The generated idea is a research artifact for simulated paper trading only. It does not guarantee profit.
 
-## Adding Real Market APIs Later
+## Market Data Provider
 
-Mock data is in:
+The live-data provider lives in:
 
 ```text
 lib/mockMarket.ts
 ```
 
-Replace `fetchMarketCandles` with a provider such as:
+Despite the legacy filename, this file now requires live Polygon data and throws an error when:
 
-- Alpha Vantage
-- Polygon.io
-- Yahoo Finance
-- CoinGecko
-- Finnhub
+- `POLYGON_API_KEY` is missing
+- Polygon rejects the request
+- The returned data is stale or delayed beyond `LIVE_DATA_MAX_AGE_MINUTES`
 
-Use `.env.example` as the template for API keys. Keep real brokerage order placement out of this project unless you intentionally create a separate, regulated, production-grade system with appropriate compliance controls.
+Do not add brokerage order placement. This project must remain paper trading only.
 
 ## Deploying To Vercel
 
-1. Push the repository to GitHub.
-2. Import the repository in Vercel.
-3. Keep the default Next.js build settings.
-4. Add optional API keys from `.env.example` if you later connect market data providers.
-5. Deploy.
+1. Import the GitHub repository in Vercel.
+2. Keep the default Next.js build settings.
+3. Add `POLYGON_API_KEY` and `LIVE_DATA_MAX_AGE_MINUTES` in Project Settings > Environment Variables.
+4. Redeploy.
 
-Note: JSON file storage is fine for local demos and educational use. For a multi-user deployed app, replace it with a hosted database such as Vercel Postgres, Turso, Supabase, or another managed database.
+Note: JSON file storage is fine for demos and educational use. For a multi-user deployed app, replace it with a hosted database such as Vercel Postgres, Turso, Supabase, or another managed database.
 
 ## Risk Disclaimer
 
