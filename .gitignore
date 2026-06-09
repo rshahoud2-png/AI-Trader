@@ -1,0 +1,13 @@
+.next/
+node_modules/
+out/
+dist/
+.vercel/
+*.log
+*.tsbuildinfo
+.env
+.env.local
+.DS_Store
+work/
+outputs/
+.git-safeconfig

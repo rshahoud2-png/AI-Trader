@@ -1,0 +1,42 @@
+{
+  "cash": 1000,
+  "settings": {
+    "startingBalance": 1000,
+    "dailyTargetPercent": 20,
+    "riskPerTradePercent": 2,
+    "maxDailyLossPercent": 5,
+    "watchlist": ["AAPL", "MSFT", "NVDA", "TSLA", "BTC", "ETH"]
+  },
+  "trades": [
+    {
+      "id": "seed-aapl-open",
+      "symbol": "AAPL",
+      "assetType": "stock",
+      "action": "buy",
+      "quantity": 1.05,
+      "entryPrice": 204.8,
+      "stopLoss": 198.65,
+      "takeProfit": 217.09,
+      "reason": "Seed simulated trade: bullish moving-average trend with controlled paper risk.",
+      "confidence": 72,
+      "timestamp": "2026-06-09T09:15:00.000Z",
+      "status": "open"
+    },
+    {
+      "id": "seed-eth-closed",
+      "symbol": "ETH",
+      "assetType": "crypto",
+      "action": "buy",
+      "quantity": 0.06,
+      "entryPrice": 3835,
+      "exitPrice": 3925,
+      "stopLoss": 3720,
+      "takeProfit": 4065,
+      "reason": "Seed simulated trade: momentum study closed for example reporting.",
+      "confidence": 68,
+      "timestamp": "2026-06-08T18:35:00.000Z",
+      "status": "closed",
+      "realizedPnl": 5.4
+    }
+  ]
+}
