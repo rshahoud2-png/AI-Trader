@@ -1,24 +1,49 @@
-import { Activity, Banknote, Target, Trophy } from "lucide-react";
+import { Activity, Banknote, RadioTower, Target, Trophy } from "lucide-react";
+import { CommandCenter } from "@/components/CommandCenter";
 import { MetricCard } from "@/components/MetricCard";
-import { MiniChart } from "@/components/MiniChart";
 import { PositionTable } from "@/components/PositionTable";
-import { ProgressBar } from "@/components/ProgressBar";
 import { TradeTable } from "@/components/TradeTable";
 import { WarningBanner } from "@/components/WarningBanner";
-import { getMockCandles } from "@/lib/mockMarket";
+import { fetchMarketCandles } from "@/lib/mockMarket";
 import { readAccount } from "@/lib/store";
 import { computeMetrics } from "@/lib/tradingEngine";
+import type { AccountMetrics } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 export default async function Home() {
   const account = await readAccount();
-  const metrics = await computeMetrics(account);
-  const chartValues = getMockCandles(account.settings.watchlist[0] ?? "AAPL").slice(-18).map((candle) => candle.close);
+  let liveError = "";
+  let chartValues: number[] = [];
+  let metrics: AccountMetrics;
+
+  try {
+    metrics = await computeMetrics(account);
+  } catch (error) {
+    liveError = getErrorMessage(error);
+    metrics = fallbackMetrics(account.settings.startingBalance, account.cash);
+  }
+
+  try {
+    const candles = await fetchMarketCandles(account.settings.watchlist[0] ?? "AAPL");
+    chartValues = candles.slice(-48).map((candle) => candle.close);
+  } catch (error) {
+    liveError = liveError || getErrorMessage(error);
+  }
 
   return (
     <>
       <WarningBanner />
+      <CommandCenter
+        metrics={metrics}
+        settings={account.settings}
+        chartValues={chartValues}
+        liveStatus={liveError ? "Needs attention" : "Streaming"}
+        liveError={liveError}
+      />
+
       <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Starting paper balance" value={money.format(metrics.startingBalance)} detail="Fake money only" icon={<Banknote size={20} />} />
         <MetricCard label="Current fake equity" value={money.format(metrics.equity)} detail={`${money.format(metrics.cash)} available cash`} icon={<Activity size={20} />} />
@@ -30,70 +55,78 @@ export default async function Home() {
           icon={<Trophy size={20} />}
         />
         <MetricCard
-          label="Win rate"
-          value={`${metrics.winRate}%`}
-          detail={`${metrics.closedPositions.length} closed paper positions`}
-          icon={<Target size={20} />}
+          label="Live feed"
+          value={liveError ? "Blocked" : "Online"}
+          detail={liveError ? "Polygon data needs attention" : "Fresh bars accepted"}
+          tone={liveError ? "warning" : "positive"}
+          icon={liveError ? <Target size={20} /> : <RadioTower size={20} />}
         />
       </section>
 
-      <section className="mb-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded border border-line bg-panel/90 p-5 shadow-glow">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Command Center</p>
-              <h2 className="mt-1 text-xl font-semibold text-white">Daily Goal Tracker</h2>
-            </div>
-            <span className="rounded border border-amber/40 bg-amber/10 px-3 py-1 text-xs font-semibold text-amber">
-              Unrealistic target warning
-            </span>
+      <section className="mb-6 grid gap-4 xl:grid-cols-[1fr_0.72fr]">
+        <div>
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <h2 className="text-xl font-semibold text-white">Open Positions</h2>
+            <span className="text-sm text-slate-500">Simulated holdings only</span>
           </div>
-          <ProgressBar
-            value={metrics.dailyGoalProgress}
-            targetLabel={`${account.settings.dailyTargetPercent}% daily goal is a target only, not an expectation or guarantee.`}
-          />
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded border border-line bg-ink/60 p-3">
-              <p className="text-xs text-slate-400">Daily P/L</p>
-              <p className={metrics.dailyPnl >= 0 ? "mt-1 font-semibold text-mint" : "mt-1 font-semibold text-danger"}>
-                {money.format(metrics.dailyPnl)}
-              </p>
-            </div>
-            <div className="rounded border border-line bg-ink/60 p-3">
-              <p className="text-xs text-slate-400">Max daily loss</p>
-              <p className="mt-1 font-semibold text-white">{account.settings.maxDailyLossPercent}%</p>
-            </div>
-            <div className="rounded border border-line bg-ink/60 p-3">
-              <p className="text-xs text-slate-400">Trading status</p>
-              <p className={metrics.tradingHalted ? "mt-1 font-semibold text-danger" : "mt-1 font-semibold text-mint"}>
-                {metrics.tradingHalted ? "Halted" : "Simulation active"}
-              </p>
-            </div>
+          <div className="overflow-x-auto">
+            <PositionTable positions={metrics.openPositions} />
           </div>
         </div>
 
         <div className="rounded border border-line bg-panel/90 p-5 shadow-glow">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Mock price stream</p>
-          <h2 className="mt-1 text-xl font-semibold text-white">{account.settings.watchlist[0] ?? "AAPL"} trend</h2>
-          <div className="mt-4">
-            <MiniChart values={chartValues} />
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Risk Console</p>
+          <h2 className="mt-1 text-xl font-semibold text-white">Daily Guardrails</h2>
+          <div className="mt-5 grid gap-3">
+            <RiskRow label="Daily P/L" value={money.format(metrics.dailyPnl)} tone={metrics.dailyPnl >= 0 ? "text-mint" : "text-danger"} />
+            <RiskRow label="Daily goal progress" value={`${metrics.dailyGoalProgress}%`} tone="text-cyan" />
+            <RiskRow label="Trading status" value={metrics.tradingHalted ? "Halted" : "Simulation active"} tone={metrics.tradingHalted ? "text-danger" : "text-mint"} />
+            <RiskRow label="Win rate" value={`${metrics.winRate}%`} tone="text-white" />
           </div>
-        </div>
-      </section>
-
-      <section className="mb-6">
-        <h2 className="mb-3 text-xl font-semibold text-white">Open Positions</h2>
-        <div className="overflow-x-auto">
-          <PositionTable positions={metrics.openPositions} />
         </div>
       </section>
 
       <section>
-        <h2 className="mb-3 text-xl font-semibold text-white">Recent Simulated Trades</h2>
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <h2 className="text-xl font-semibold text-white">Recent Simulated Trades</h2>
+          <span className="text-sm text-slate-500">No brokerage orders</span>
+        </div>
         <div className="overflow-x-auto">
           <TradeTable trades={metrics.recentTrades} />
         </div>
       </section>
     </>
   );
+}
+
+function RiskRow({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div className="flex items-center justify-between rounded border border-line bg-ink/60 px-4 py-3">
+      <span className="text-sm text-slate-400">{label}</span>
+      <span className={`font-semibold ${tone}`}>{value}</span>
+    </div>
+  );
+}
+
+function fallbackMetrics(startingBalance: number, cash: number): AccountMetrics {
+  return {
+    startingBalance,
+    cash,
+    equity: cash,
+    totalPnl: 0,
+    totalPnlPercent: 0,
+    dailyPnl: 0,
+    dailyPnlPercent: 0,
+    dailyGoalProgress: 0,
+    winRate: 0,
+    openPositions: [],
+    closedPositions: [],
+    recentTrades: [],
+    tradingHalted: false,
+    warnings: []
+  };
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Live market data is currently unavailable.";
 }
