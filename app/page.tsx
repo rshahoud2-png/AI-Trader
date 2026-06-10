@@ -78,10 +78,10 @@ export default async function Home() {
           <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Risk Console</p>
           <h2 className="mt-1 text-xl font-semibold text-white">Daily Guardrails</h2>
           <div className="mt-5 grid gap-3">
-            <RiskRow label="Daily P/L" value={money.format(metrics.dailyPnl)} tone={metrics.dailyPnl >= 0 ? "text-mint" : "text-danger"} />
-            <RiskRow label="Daily goal progress" value={`${metrics.dailyGoalProgress}%`} tone="text-cyan" />
-            <RiskRow label="Trading status" value={metrics.tradingHalted ? "Halted" : "Simulation active"} tone={metrics.tradingHalted ? "text-danger" : "text-mint"} />
-            <RiskRow label="Win rate" value={`${metrics.winRate}%`} tone="text-white" />
+            <RiskRow label="Daily P/L" value={money.format(metrics.dailyPnl)} tone={metrics.dailyPnl >= 0 ? "text-mint" : "text-danger"} width={Math.min(100, Math.abs(metrics.dailyPnlPercent) * 10)} />
+            <RiskRow label="Daily goal progress" value={`${metrics.dailyGoalProgress}%`} tone="text-cyan" width={Math.max(5, Math.min(100, metrics.dailyGoalProgress))} />
+            <RiskRow label="Trading status" value={metrics.tradingHalted ? "Halted" : "Simulation active"} tone={metrics.tradingHalted ? "text-danger" : "text-mint"} width={metrics.tradingHalted ? 100 : 55} />
+            <RiskRow label="Win rate" value={`${metrics.winRate}%`} tone="text-white" width={Math.max(8, metrics.winRate)} />
           </div>
         </div>
       </section>
@@ -99,12 +99,17 @@ export default async function Home() {
   );
 }
 
-function RiskRow({ label, value, tone }: { label: string; value: string; tone: string }) {
+function RiskRow({ label, value, tone, width }: { label: string; value: string; tone: string; width: number }) {
   return (
-    <div className="flex items-center justify-between rounded border border-line bg-ink/60 px-4 py-3">
-      <span className="text-sm text-slate-400">{label}</span>
-      <span className={`font-semibold ${tone}`}>{value}</span>
-    </div>
+    <button type="button" className="group rounded border border-line bg-ink/60 px-4 py-3 text-left transition hover:border-cyan/50 hover:bg-panel2/70">
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-sm text-slate-400">{label}</span>
+        <span className={`font-semibold ${tone}`}>{value}</span>
+      </div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded bg-ink ring-1 ring-line">
+        <div className="h-full rounded bg-cyan transition-all duration-700 group-hover:bg-mint" style={{ width: `${width}%` }} />
+      </div>
+    </button>
   );
 }
 
