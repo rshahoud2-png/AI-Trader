@@ -13,18 +13,25 @@ This project uses fake money only.
 - Live market data is used only for research and simulated paper trades
 - The `20%` daily target is displayed only as an unrealistic stretch target, not an expectation or guarantee
 
-## Live Market Data Requirement
+## Polygon Market Data Requirement
 
-The app is configured for live-data-only mode. It does not fall back to mock prices.
+The app uses Polygon data and does not fall back to mock prices.
 
-You must add a Polygon API key in Vercel:
+Add these variables in Vercel:
 
 ```text
 POLYGON_API_KEY=your_polygon_key_here
-LIVE_DATA_MAX_AGE_MINUTES=5
+LIVE_DATA_MAX_AGE_MINUTES=15
+LIVE_DATA_STRICT=false
 ```
 
-A real-time Polygon plan is required for truly live U.S. stock data. If the newest returned bar is older than `LIVE_DATA_MAX_AGE_MINUTES`, the app blocks it and shows an error rather than treating delayed or stale data as live.
+A real-time Polygon plan is required for truly live U.S. stock data during market hours. The app now tries multiple Polygon aggregate windows so it can display provider-backed bars reliably:
+
+- 1-minute bars over the recent window
+- 5-minute bars over a broader window
+- Daily bars as a last provider-backed fallback
+
+During U.S. stock market hours, minute bars older than `LIVE_DATA_MAX_AGE_MINUTES` are rejected. Outside market hours, `LIVE_DATA_STRICT=false` allows the dashboard to display the latest available Polygon bars instead of looking broken while the exchange is closed. Set `LIVE_DATA_STRICT=true` if you want stale bars rejected at all times.
 
 Crypto symbols such as `BTC`, `ETH`, `SOL`, and `DOGE` are mapped to Polygon crypto tickers like `X:BTCUSD`. Stock symbols such as `AAPL`, `MSFT`, `NVDA`, and `TSLA` are sent directly to Polygon.
 
@@ -125,17 +132,18 @@ The generated idea is a research artifact for simulated paper trading only. It d
 
 ## Market Data Provider
 
-The live-data provider lives in:
+The Polygon provider lives in:
 
 ```text
 lib/mockMarket.ts
 ```
 
-Despite the legacy filename, this file now requires live Polygon data and throws an error when:
+Despite the legacy filename, this file requires Polygon data and throws an error when:
 
 - `POLYGON_API_KEY` is missing
 - Polygon rejects the request
-- The returned data is stale or delayed beyond `LIVE_DATA_MAX_AGE_MINUTES`
+- No provider-backed bars are available
+- Freshness rules reject stale minute data
 
 Do not add brokerage order placement. This project must remain paper trading only.
 
@@ -143,7 +151,7 @@ Do not add brokerage order placement. This project must remain paper trading onl
 
 1. Import the GitHub repository in Vercel.
 2. Keep the default Next.js build settings.
-3. Add `POLYGON_API_KEY` and `LIVE_DATA_MAX_AGE_MINUTES` in Project Settings > Environment Variables.
+3. Add `POLYGON_API_KEY`, `LIVE_DATA_MAX_AGE_MINUTES`, and `LIVE_DATA_STRICT` in Project Settings > Environment Variables.
 4. Redeploy.
 
 Note: JSON file storage is fine for demos and educational use. For a multi-user deployed app, replace it with a hosted database such as Vercel Postgres, Turso, Supabase, or another managed database.
