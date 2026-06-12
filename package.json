@@ -1,40 +1,45 @@
 {
   "name": "ai-penny-stock-terminal",
-  "version": "1.0.0",
   "private": true,
-  "description": "AI penny stock research and paper trading terminal using real market data providers.",
-  "main": "electron/main.cjs",
+  "version": "0.1.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --host 0.0.0.0",
-    "electron:dev": "npm run build && electron .",
-    "dist:win": "npm run build && electron-builder --win nsis",
-    "typecheck": "tsc --noEmit"
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "dist:win": "npm run build && electron-builder --win nsis --publish never"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.50.0",
-    "lucide-react": "^0.468.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "@supabase/supabase-js": "latest",
+    "lucide-react": "latest",
+    "react": "latest",
+    "react-dom": "latest"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "@types/react": "^19.0.1",
-    "@types/react-dom": "^19.0.1",
-    "@vercel/node": "^5.5.0",
-    "@vitejs/plugin-react": "^4.3.4",
-    "autoprefixer": "^10.4.20",
-    "electron": "^33.2.1",
-    "electron-builder": "^25.1.8",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2",
-    "vite": "^6.0.7"
+    "@eslint/js": "latest",
+    "@tailwindcss/postcss": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@vercel/node": "latest",
+    "@vitejs/plugin-react": "latest",
+    "autoprefixer": "latest",
+    "electron": "latest",
+    "electron-builder": "latest",
+    "eslint": "latest",
+    "eslint-plugin-react-hooks": "latest",
+    "eslint-plugin-react-refresh": "latest",
+    "globals": "latest",
+    "postcss": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest",
+    "typescript-eslint": "latest",
+    "vite": "latest"
   },
   "build": {
-    "appId": "com.lifestyle.aipennystockterminal",
+    "appId": "com.lifestyle.ai.pennystockterminal",
     "productName": "AI Penny Stock Terminal",
     "directories": {
       "output": "release"
