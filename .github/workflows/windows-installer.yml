@@ -25,8 +25,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install dependencies
+      - name: Install web dependencies
         run: npm install
+
+      - name: Install desktop packaging tools
+        run: npm install --no-save --no-package-lock electron@latest electron-builder@latest
 
       - name: Build Windows installer
         run: npm run dist:win
