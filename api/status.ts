@@ -65,6 +65,11 @@ export default async function handler(_request: VercelRequest, response: VercelR
       tables
     },
     providers: {
+      fmp: fmpHealth.connected,
+      finnhub: finnhubHealth.connected,
+      alphaVantage: alphaHealth.connected
+    },
+    providerHealth: {
       fmp: fmpHealth,
       finnhub: finnhubHealth,
       alphaVantage: alphaHealth
