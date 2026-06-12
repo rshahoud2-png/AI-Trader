@@ -150,7 +150,7 @@ export default function App() {
         </header>
 
         <div className="grid gap-5 p-5">
-          {!hasAnyProvider && <SetupStatus status={status} onRefresh={() => void refreshAll()} />}
+          {!hasAnyProvider && view !== 'status' && <SetupStatus status={status} onRefresh={() => void refreshAll()} />}
           {hasAnyProvider && view === 'dashboard' && <Dashboard equity={equity} account={markedAccount} openPl={openPl} recommendations={recommendations} watchQuotes={watchQuotes} news={news} />}
           {hasAnyProvider && view === 'scanner' && <Scanner rows={scanner} canScan={hasFmp} loading={loading} onRefresh={() => void refreshAll()} />}
           {hasAnyProvider && view === 'research' && <Research recommendations={recommendations} />}
