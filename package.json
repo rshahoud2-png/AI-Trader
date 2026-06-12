@@ -26,8 +26,6 @@
     "@vercel/node": "latest",
     "@vitejs/plugin-react": "latest",
     "autoprefixer": "latest",
-    "electron": "latest",
-    "electron-builder": "latest",
     "eslint": "latest",
     "eslint-plugin-react-hooks": "latest",
     "eslint-plugin-react-refresh": "latest",
