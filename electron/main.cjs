@@ -34,7 +34,7 @@ function errorHtml(title, detail) {
     </style>
   </head>
   <body>
-    <main>
+    <main data-desktop-error>
       <h1>${escapedTitle}</h1>
       <p>The desktop shell opened, but the React/Vite UI could not load. This diagnostic screen is shown instead of a blank black window.</p>
       <pre>${escapedDetail}</pre>
