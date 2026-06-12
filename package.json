@@ -1,29 +1,55 @@
 {
-  "name": "educational-paper-trading-ai-agent",
+  "name": "ai-penny-stock-terminal",
   "version": "1.0.0",
   "private": true,
+  "description": "AI penny stock research and paper trading terminal using real market data providers.",
+  "main": "electron/main.cjs",
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint .",
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "electron:dev": "npm run build && electron .",
+    "dist:win": "npm run build && electron-builder --win nsis",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
     "lucide-react": "^0.468.0",
-    "next": "^16.2.7",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@types/node": "^20.17.10",
+    "@types/node": "^22.10.2",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.1",
+    "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
-    "eslint": "^9.17.0",
-    "eslint-config-next": "^16.2.7",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
+  },
+  "build": {
+    "appId": "com.lifestyle.aipennystockterminal",
+    "productName": "AI Penny Stock Terminal",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "AI-Penny-Stock-Terminal-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
