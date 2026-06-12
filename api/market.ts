@@ -41,17 +41,16 @@ export default async function handler(request: VercelRequest, response: VercelRe
       .map((symbol) => symbol.trim().toUpperCase())
       .filter(Boolean);
 
-    if (type === 'status') {
-      response.status(200).json({ providers: { fmp: Boolean(keys.fmp), finnhub: Boolean(keys.finnhub), alphaVantage: Boolean(keys.alphaVantage) } });
-      return;
-    }
-
     if (type === 'scanner') {
       if (!keys.fmp) throw new Error('VITE_FMP_API_KEY is required for the penny stock scanner. Add it in Vercel Environment Variables and redeploy.');
       const maxPrice = Number(request.query.maxPrice || 5);
       const minVolume = Number(request.query.minVolume || 500000);
-      const rows = await providerJson<Array<Record<string, unknown>>>(`${fmp}/stock-screener?priceMoreThan=0.05&priceLowerThan=${maxPrice}&volumeMoreThan=${minVolume}&isActivelyTrading=true&limit=80&apikey=${keys.fmp}`);
-      response.status(200).json({ rows: rows.map(mapFmpScreener).filter((row) => row.price > 0 && row.price <= maxPrice).slice(0, 40) });
+      try {
+        const rows = await providerJson<Array<Record<string, unknown>>>(`${fmp}/stock-screener?priceMoreThan=0.05&priceLowerThan=${maxPrice}&volumeMoreThan=${minVolume}&isActivelyTrading=true&limit=80&apikey=${keys.fmp}`);
+        response.status(200).json({ rows: rows.map(mapFmpScreener).filter((row) => row.price > 0 && row.price <= maxPrice).slice(0, 40) });
+      } catch (error) {
+        response.status(200).json({ rows: [], error: `FMP scanner request failed. Confirm VITE_FMP_API_KEY is valid and your FMP plan allows the stock-screener endpoint. ${error instanceof Error ? error.message : ''}`.trim() });
+      }
       return;
     }
 
@@ -72,56 +71,80 @@ export default async function handler(request: VercelRequest, response: VercelRe
 }
 
 async function getQuotes(keys: ReturnType<typeof apiKeys>, symbols: string[]): Promise<MarketQuote[]> {
+  const errors: string[] = [];
+
   if (keys.fmp) {
-    const rows = await providerJson<Array<Record<string, unknown>>>(`${fmp}/quote/${symbols.join(',')}?apikey=${keys.fmp}`);
-    return rows.map(mapFmpQuote);
+    try {
+      const rows = await providerJson<Array<Record<string, unknown>>>(`${fmp}/quote/${symbols.join(',')}?apikey=${keys.fmp}`);
+      return rows.map(mapFmpQuote).filter((row) => row.price > 0);
+    } catch (error) {
+      errors.push(`FMP: ${error instanceof Error ? error.message : 'request failed'}`);
+    }
   }
 
   if (keys.finnhub) {
-    return Promise.all(symbols.map(async (symbol) => {
-      const row = await providerJson<Record<string, number>>(`${finnhub}/quote?symbol=${symbol}&token=${keys.finnhub}`);
-      return { symbol, price: Number(row.c || 0), changePercent: Number(row.dp || 0), volume: 0, provider: 'Finnhub' as const, fetchedAt: new Date().toISOString() };
-    }));
+    try {
+      return await Promise.all(symbols.map(async (symbol) => {
+        const row = await providerJson<Record<string, number>>(`${finnhub}/quote?symbol=${symbol}&token=${keys.finnhub}`);
+        return { symbol, price: Number(row.c || 0), changePercent: Number(row.dp || 0), volume: 0, provider: 'Finnhub' as const, fetchedAt: new Date().toISOString() };
+      }));
+    } catch (error) {
+      errors.push(`Finnhub: ${error instanceof Error ? error.message : 'request failed'}`);
+    }
   }
 
   if (keys.alphaVantage) {
-    return Promise.all(symbols.map(async (symbol) => {
-      const row = await providerJson<Record<string, Record<string, string>>>(`${alpha}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${keys.alphaVantage}`);
-      const quote = row['Global Quote'] || {};
-      return { symbol, price: Number(quote['05. price'] || 0), changePercent: Number(String(quote['10. change percent'] || '0').replace('%', '')), volume: Number(quote['06. volume'] || 0), provider: 'Alpha Vantage' as const, fetchedAt: new Date().toISOString() };
-    }));
+    try {
+      return await Promise.all(symbols.map(async (symbol) => {
+        const row = await providerJson<Record<string, Record<string, string>>>(`${alpha}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${keys.alphaVantage}`);
+        const quote = row['Global Quote'] || {};
+        return { symbol, price: Number(quote['05. price'] || 0), changePercent: Number(String(quote['10. change percent'] || '0').replace('%', '')), volume: Number(quote['06. volume'] || 0), provider: 'Alpha Vantage' as const, fetchedAt: new Date().toISOString() };
+      }));
+    } catch (error) {
+      errors.push(`Alpha Vantage: ${error instanceof Error ? error.message : 'request failed'}`);
+    }
   }
 
-  throw new Error('No market data provider keys are configured. Confirm VITE_FMP_API_KEY in Vercel.');
+  throw new Error(errors.length ? `All configured market providers failed: ${errors.join('; ')}` : 'No market data provider keys are configured. Confirm VITE_FMP_API_KEY in Vercel.');
 }
 
 async function getNews(keys: ReturnType<typeof apiKeys>, symbols: string[]) {
+  const errors: string[] = [];
   if (keys.fmp) {
-    const rows = await providerJson<Array<Record<string, unknown>>>(`${fmp}/stock_news?tickers=${symbols.slice(0, 8).join(',')}&limit=20&apikey=${keys.fmp}`);
-    return rows.map((row) => ({
-      symbol: String(row.symbol || ''),
-      title: String(row.title || 'Untitled market item'),
-      source: String(row.site || 'FMP'),
-      url: String(row.url || '#'),
-      publishedAt: String(row.publishedDate || new Date().toISOString()),
-      sentiment: inferSentiment(String(row.title || ''))
-    }));
+    try {
+      const rows = await providerJson<Array<Record<string, unknown>>>(`${fmp}/stock_news?tickers=${symbols.slice(0, 8).join(',')}&limit=20&apikey=${keys.fmp}`);
+      return rows.map((row) => ({
+        symbol: String(row.symbol || ''),
+        title: String(row.title || 'Untitled market item'),
+        source: String(row.site || 'FMP'),
+        url: String(row.url || '#'),
+        publishedAt: String(row.publishedDate || new Date().toISOString()),
+        sentiment: inferSentiment(String(row.title || ''))
+      }));
+    } catch (error) {
+      errors.push(`FMP news: ${error instanceof Error ? error.message : 'request failed'}`);
+    }
   }
 
   if (keys.finnhub) {
-    const from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-    const to = new Date().toISOString().slice(0, 10);
-    const rows = await Promise.all(symbols.slice(0, 5).map((symbol) => providerJson<Array<Record<string, unknown>>>(`${finnhub}/company-news?symbol=${symbol}&from=${from}&to=${to}&token=${keys.finnhub}`)));
-    return rows.flat().slice(0, 20).map((row) => ({
-      symbol: String(row.related || ''),
-      title: String(row.headline || 'Untitled market item'),
-      source: String(row.source || 'Finnhub'),
-      url: String(row.url || '#'),
-      publishedAt: new Date(Number(row.datetime || Date.now() / 1000) * 1000).toISOString(),
-      sentiment: inferSentiment(String(row.headline || ''))
-    }));
+    try {
+      const from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+      const to = new Date().toISOString().slice(0, 10);
+      const rows = await Promise.all(symbols.slice(0, 5).map((symbol) => providerJson<Array<Record<string, unknown>>>(`${finnhub}/company-news?symbol=${symbol}&from=${from}&to=${to}&token=${keys.finnhub}`)));
+      return rows.flat().slice(0, 20).map((row) => ({
+        symbol: String(row.related || ''),
+        title: String(row.headline || 'Untitled market item'),
+        source: String(row.source || 'Finnhub'),
+        url: String(row.url || '#'),
+        publishedAt: new Date(Number(row.datetime || Date.now() / 1000) * 1000).toISOString(),
+        sentiment: inferSentiment(String(row.headline || ''))
+      }));
+    } catch (error) {
+      errors.push(`Finnhub news: ${error instanceof Error ? error.message : 'request failed'}`);
+    }
   }
 
+  if (errors.length) throw new Error(`News providers failed: ${errors.join('; ')}`);
   return [];
 }
 
