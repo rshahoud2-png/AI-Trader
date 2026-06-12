@@ -2,54 +2,46 @@
 
 A production-oriented React + TypeScript + Vite terminal for researching U.S. penny stocks, ranking opportunities with an AI-style scoring engine, and paper trading with a $1,000 virtual account.
 
-This application uses real market data providers only. If API keys are missing, the app shows a setup screen instead of fake market rows.
+The app uses real market data only. If provider data cannot load, the dashboard shows a setup/status panel and a clear provider error instead of fake market rows.
 
-## Stack
+## Current Production Architecture
 
-- React + TypeScript + Vite
-- Tailwind CSS
-- Supabase PostgreSQL schema and client integration
-- Financial Modeling Prep primary market data
-- Finnhub and Alpha Vantage quote/news fallbacks
-- Vercel deployment config
-- Electron + electron-builder Windows packaging support
-- GitHub Actions workflow for Windows installer builds
+- Vite renders the terminal UI.
+- Vercel serverless functions proxy provider calls through same-origin routes:
+  - `/api/status`
+  - `/api/market`
+- Provider keys are read by Vercel functions from environment variables.
+- FMP is required for the scanner. Finnhub and Alpha Vantage are fallbacks for quotes/news.
+- Supabase table health is checked by `/api/status`.
 
-## Market Data
+## Required Vercel Environment Variables
 
-Primary provider:
+Confirm these exact names in Vercel Project Settings > Environment Variables:
 
 ```text
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_FMP_API_KEY=your_fmp_key
 ```
 
-Fallback providers:
+Optional fallback providers:
 
 ```text
 VITE_FINNHUB_API_KEY=your_finnhub_key
 VITE_ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
 ```
 
-FMP is required for full U.S. penny stock discovery because the scanner uses FMP's screener endpoint for stocks under the configured max price. Finnhub and Alpha Vantage are used for fallback quotes and news/watchlist coverage.
+If `/api/status` reports `FMP returned HTTP 403`, the variable exists but the key is invalid, restricted, expired, or the FMP plan does not allow the requested endpoint. Replace the key or upgrade/enable the required FMP endpoints, then redeploy.
 
-## Supabase Setup
+## Supabase SQL Setup
 
-1. Create a Supabase project.
-2. Open the SQL editor or Supabase CLI.
-3. Run the migration in:
+Run this file in Supabase SQL Editor:
 
 ```text
 supabase/migrations/20260612000000_initial_terminal_schema.sql
 ```
 
-4. Add these Vercel environment variables:
-
-```text
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-The schema includes:
+It creates:
 
 - profiles
 - paper_accounts
@@ -61,23 +53,36 @@ The schema includes:
 - market_data_cache
 - app_settings
 
-## Vercel Deployment
-
-1. Import this GitHub repository into Vercel.
-2. Vercel should detect Vite automatically.
-3. Confirm build settings:
+Quick verification after deployment:
 
 ```text
-Build command: npm run build
-Output directory: dist
+https://your-vercel-domain.vercel.app/api/status
 ```
 
-4. Add the environment variables from `.env.example`.
-5. Redeploy.
+All required tables should show `exists: true` or `reachable`.
+
+## Vercel Deployment
+
+1. Import this repository into Vercel.
+2. Framework preset: Vite.
+3. Build command:
+
+```text
+npm run build
+```
+
+4. Output directory:
+
+```text
+dist
+```
+
+5. Add the environment variables above.
+6. Redeploy after changing any provider key.
 
 ## Local Commands
 
-You said you do not have a local development environment, but these commands are available for CI or future local work:
+These are for CI or future local work:
 
 ```bash
 npm install
@@ -100,20 +105,18 @@ GitHub Actions workflow:
 .github/workflows/windows-installer.yml
 ```
 
-The workflow installs dependencies, builds the Vite app, runs electron-builder, and uploads the Windows installer artifact.
+## Features
 
-## Application Features
-
-- Setup screen when API keys are missing
-- Professional dark trading terminal layout
-- Real-data watchlist quotes
-- Real market news via provider APIs
+- Deployment status page for Supabase and provider health
+- Professional dark trading terminal UI
+- Real provider-backed watchlist quotes
+- Real market news through provider APIs
 - FMP penny stock scanner under the configured max price, default `$5`
-- AI research rankings based on price action, volume, relative volume, technical indicators, and news sentiment
+- AI rankings based on price action, volume, relative volume, technical indicators, and news sentiment
 - Paper trading portfolio starting at `$1,000`
 - Buy/sell paper trades using real quotes only
 - Trade history and open-position tracking
-- Settings for API keys and risk management
+- Risk and watchlist settings
 
 ## Important Disclaimer
 
