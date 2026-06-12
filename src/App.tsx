@@ -5,6 +5,7 @@ import { loadSettings, saveSettings, type PersistedSettings } from './lib/config
 import { getMarketNews, getQuotes, scanPennyStocks } from './lib/marketData';
 import { rankOpportunities } from './lib/aiEngine';
 import { accountEquity, buy, loadAccount, markToMarket, saveAccount, sell, unrealizedPl } from './lib/paperTrading';
+import { apiUrl } from './lib/runtime';
 import { currency, pct } from './lib/technicals';
 
 type View = 'dashboard' | 'scanner' | 'research' | 'paper' | 'status' | 'settings';
@@ -60,7 +61,7 @@ export default function App() {
 
   async function refreshStatus() {
     try {
-      const response = await fetch('/api/status', { headers: { accept: 'application/json' } });
+      const response = await fetch(apiUrl('/api/status'), { headers: { accept: 'application/json' } });
       if (!response.ok) throw new Error(`Status API failed with HTTP ${response.status}`);
       const payload = await response.json() as DeploymentStatus;
       setStatus(payload);
