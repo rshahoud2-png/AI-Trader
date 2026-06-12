@@ -1,4 +1,5 @@
 import type { ApiKeys, MarketQuote, NewsItem } from '../types';
+import { apiUrl } from './runtime';
 
 interface MarketResponse<T> {
   rows: T[];
@@ -6,7 +7,7 @@ interface MarketResponse<T> {
 }
 
 async function getRows<T>(url: string): Promise<T[]> {
-  const response = await fetch(url, { headers: { accept: 'application/json' } });
+  const response = await fetch(apiUrl(url), { headers: { accept: 'application/json' } });
   if (!response.ok) throw new Error(`Application API request failed with HTTP ${response.status}`);
   const payload = await response.json() as MarketResponse<T>;
   if (payload.error) throw new Error(payload.error);
