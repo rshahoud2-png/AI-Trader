@@ -10,9 +10,9 @@ export interface PersistedSettings {
 
 export const defaultSettings: PersistedSettings = {
   apiKeys: {
-    fmp: import.meta.env.VITE_FMP_API_KEY || '',
-    finnhub: import.meta.env.VITE_FINNHUB_API_KEY || '',
-    alphaVantage: import.meta.env.VITE_ALPHA_VANTAGE_API_KEY || ''
+    fmp: '',
+    finnhub: '',
+    alphaVantage: ''
   },
   risk: {
     scannerMaxPrice: Number(import.meta.env.VITE_DEFAULT_MAX_PRICE || 5),
@@ -41,12 +41,4 @@ export function loadSettings(): PersistedSettings {
 
 export function saveSettings(settings: PersistedSettings) {
   localStorage.setItem(keyName, JSON.stringify(settings));
-}
-
-export function hasAnyMarketKey(keys: ApiKeys) {
-  return Boolean(keys.fmp || keys.finnhub || keys.alphaVantage);
-}
-
-export function hasPrimaryScannerKey(keys: ApiKeys) {
-  return Boolean(keys.fmp);
 }
