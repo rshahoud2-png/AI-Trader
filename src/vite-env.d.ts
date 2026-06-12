@@ -4,5 +4,6 @@ interface Window {
   terminalShell?: {
     platform: string;
     packagedAt: string;
+    apiBase?: string;
   };
 }
