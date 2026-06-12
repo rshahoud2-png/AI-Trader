@@ -17,25 +17,26 @@ function log(message) {
 }
 
 function errorHtml(title, detail) {
+  const escapedTitle = String(title || 'Desktop startup error').replace(/[&<>]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[char]));
   const escapedDetail = String(detail || 'Unknown error').replace(/[&<>]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[char]));
   return `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>${title}</title>
+    <title>${escapedTitle}</title>
     <style>
       :root { color-scheme: dark; font-family: Inter, Segoe UI, Arial, sans-serif; }
       body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #06080d; color: #e5edf7; }
-      main { width: min(760px, calc(100vw - 48px)); border: 1px solid #243044; background: #0d1320; border-radius: 16px; padding: 28px; box-shadow: 0 24px 80px rgba(0,0,0,.35); }
+      main { width: min(820px, calc(100vw - 48px)); border: 1px solid #243044; background: #0d1320; border-radius: 16px; padding: 28px; box-shadow: 0 24px 80px rgba(0,0,0,.35); }
       h1 { margin: 0 0 12px; color: #67e8f9; font-size: 24px; }
       p { color: #a9b6c8; line-height: 1.55; }
-      pre { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid #243044; border-radius: 12px; padding: 14px; background: #06080d; color: #fca5a5; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid #243044; border-radius: 12px; padding: 14px; background: #06080d; color: #fca5a5; max-height: 420px; overflow: auto; }
     </style>
   </head>
   <body>
     <main>
-      <h1>${title}</h1>
-      <p>The desktop shell opened, but the React/Vite UI could not load. This screen is shown instead of a blank window so the issue can be diagnosed.</p>
+      <h1>${escapedTitle}</h1>
+      <p>The desktop shell opened, but the React/Vite UI could not load. This diagnostic screen is shown instead of a blank black window.</p>
       <pre>${escapedDetail}</pre>
       <p>Logs are written to the app logs folder as <strong>desktop.log</strong>.</p>
     </main>
@@ -48,6 +49,31 @@ function showError(win, title, detail) {
   win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(errorHtml(title, detail))}`).catch((error) => {
     log(`Unable to render fallback error screen: ${error.message}`);
   });
+}
+
+function verifyRendererMounted(win) {
+  setTimeout(() => {
+    if (win.isDestroyed()) return;
+    win.webContents.executeJavaScript(`(() => {
+      const root = document.getElementById('root');
+      return {
+        href: location.href,
+        title: document.title,
+        mounted: document.body.dataset.reactMounted === 'true',
+        bootError: document.body.dataset.reactBootError || '',
+        hasDesktopError: Boolean(document.querySelector('[data-desktop-error]')),
+        rootHtml: root ? root.innerHTML.slice(0, 1000) : 'missing #root',
+        scripts: Array.from(document.scripts).map((script) => script.src || script.textContent.slice(0, 120))
+      };
+    })()`).then((state) => {
+      log(`Renderer health check: ${JSON.stringify(state)}`);
+      if (!state.mounted && !state.hasDesktopError) {
+        showError(win, 'React renderer did not mount', JSON.stringify(state, null, 2));
+      }
+    }).catch((error) => {
+      showError(win, 'Renderer health check failed', error.message);
+    });
+  }, 5000);
 }
 
 function createWindow() {
@@ -79,6 +105,10 @@ function createWindow() {
 
   win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
     showError(win, 'Desktop UI failed to load', `${errorDescription} (${errorCode}) while loading ${validatedURL}`);
+  });
+
+  win.webContents.on('did-finish-load', () => {
+    verifyRendererMounted(win);
   });
 
   win.webContents.on('render-process-gone', (_event, details) => {
