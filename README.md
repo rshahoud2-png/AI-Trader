@@ -1,161 +1,120 @@
-# Educational Paper-Trading AI Agent
+# AI Penny Stock Research & Paper Trading Terminal
 
-A full-stack Next.js dashboard for an educational AI-style market research and paper-trading simulator.
+A production-oriented React + TypeScript + Vite terminal for researching U.S. penny stocks, ranking opportunities with an AI-style scoring engine, and paper trading with a $1,000 virtual account.
 
-## Safety First
+This application uses real market data providers only. If API keys are missing, the app shows a setup screen instead of fake market rows.
 
-This project uses fake money only.
+## Stack
 
-- Starting balance: `$1,000` paper balance
-- No real brokerage connections
-- No real orders
-- No financial advice
-- Live market data is used only for research and simulated paper trades
-- The `20%` daily target is displayed only as an unrealistic stretch target, not an expectation or guarantee
+- React + TypeScript + Vite
+- Tailwind CSS
+- Supabase PostgreSQL schema and client integration
+- Financial Modeling Prep primary market data
+- Finnhub and Alpha Vantage quote/news fallbacks
+- Vercel deployment config
+- Electron + electron-builder Windows packaging support
+- GitHub Actions workflow for Windows installer builds
 
-## Polygon Market Data Requirement
+## Market Data
 
-The app uses Polygon data and does not fall back to mock prices.
-
-Add these variables in Vercel:
+Primary provider:
 
 ```text
-POLYGON_API_KEY=your_polygon_key_here
-LIVE_DATA_MAX_AGE_MINUTES=15
-LIVE_DATA_STRICT=false
+VITE_FMP_API_KEY=your_fmp_key
 ```
 
-A real-time Polygon plan is required for truly live U.S. stock data during market hours. The app now tries multiple Polygon aggregate windows so it can display provider-backed bars reliably:
+Fallback providers:
 
-- 1-minute bars over the recent window
-- 5-minute bars over a broader window
-- Daily bars as a last provider-backed fallback
+```text
+VITE_FINNHUB_API_KEY=your_finnhub_key
+VITE_ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
+```
 
-During U.S. stock market hours, minute bars older than `LIVE_DATA_MAX_AGE_MINUTES` are rejected. Outside market hours, `LIVE_DATA_STRICT=false` allows the dashboard to display the latest available Polygon bars instead of looking broken while the exchange is closed. Set `LIVE_DATA_STRICT=true` if you want stale bars rejected at all times.
+FMP is required for full U.S. penny stock discovery because the scanner uses FMP's screener endpoint for stocks under the configured max price. Finnhub and Alpha Vantage are used for fallback quotes and news/watchlist coverage.
 
-Crypto symbols such as `BTC`, `ETH`, `SOL`, and `DOGE` are mapped to Polygon crypto tickers like `X:BTCUSD`. Stock symbols such as `AAPL`, `MSFT`, `NVDA`, and `TSLA` are sent directly to Polygon.
+## Supabase Setup
 
-## Features
+1. Create a Supabase project.
+2. Open the SQL editor or Supabase CLI.
+3. Run the migration in:
 
-- Paper trading engine with cash, equity, open positions, closed positions, P/L, daily P/L, and win rate
-- Simulated buy/sell/hold trade ideas for stocks and crypto
-- Trade records include symbol, action, fake quantity, entry, exit, stop loss, take profit, reason, confidence, and timestamp
-- AI-style daily market study using price trend, volume, moving averages, RSI, MACD, placeholder sentiment, and risk/reward
-- Risk controls for max risk per trade, max daily loss, and daily target
-- Stop-trading status when max daily paper loss is reached
-- Dark professional fintech dashboard UI
-- JSON-backed storage in `data/paper-account.json`
-- API routes for account, research, and settings
-- Ready for Vercel deployment
+```text
+supabase/migrations/20260612000000_initial_terminal_schema.sql
+```
 
-## Tech Stack
+4. Add these Vercel environment variables:
 
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- JSON storage
-- API routes
-- Lucide icons
-- Polygon market data
+```text
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-## Getting Started
+The schema includes:
 
-Install dependencies:
+- profiles
+- paper_accounts
+- watchlists
+- paper_trades
+- paper_positions
+- ai_recommendations
+- daily_market_reports
+- market_data_cache
+- app_settings
+
+## Vercel Deployment
+
+1. Import this GitHub repository into Vercel.
+2. Vercel should detect Vite automatically.
+3. Confirm build settings:
+
+```text
+Build command: npm run build
+Output directory: dist
+```
+
+4. Add the environment variables from `.env.example`.
+5. Redeploy.
+
+## Local Commands
+
+You said you do not have a local development environment, but these commands are available for CI or future local work:
 
 ```bash
 npm install
-```
-
-Run locally only if you intentionally want a local development server:
-
-```bash
 npm run dev
+npm run build
+npm run preview
 ```
 
-Build for production:
+## Electron / Windows Installer
+
+Electron support is included for future desktop packaging.
 
 ```bash
-npm run build
+npm run dist:win
 ```
 
-## Pages
-
-- `/` - dashboard with fake balance, daily goal progress, P/L, open positions, and recent simulated trades
-- `/research` - daily market notes, watchlist analysis, and generated paper trade ideas
-- `/settings` - starting balance, daily target, risk per trade, max daily loss, and watchlist symbols
-
-## API Routes
-
-- `GET /api/account` returns account state and calculated metrics
-- `GET /api/research` returns the daily market study
-- `POST /api/research` runs the daily study and may add one simulated paper trade if risk rules allow it
-- `GET /api/settings` returns current settings
-- `PATCH /api/settings` updates simulator settings
-
-## How The Fake Trading Engine Works
-
-The simulator starts with a `$1,000` fake balance. It reads and writes account data from:
+GitHub Actions workflow:
 
 ```text
-data/paper-account.json
+.github/workflows/windows-installer.yml
 ```
 
-The engine:
+The workflow installs dependencies, builds the Vite app, runs electron-builder, and uploads the Windows installer artifact.
 
-- Tracks paper cash and simulated trades
-- Values open positions using live market data
-- Calculates realized and unrealized P/L
-- Calculates daily P/L and daily goal progress
-- Calculates win rate from closed simulated trades
-- Blocks simulated entries when the max daily loss threshold is reached
-- Caps position sizing so the account never goes all-in
+## Application Features
 
-## AI Market Research Agent
+- Setup screen when API keys are missing
+- Professional dark trading terminal layout
+- Real-data watchlist quotes
+- Real market news via provider APIs
+- FMP penny stock scanner under the configured max price, default `$5`
+- AI research rankings based on price action, volume, relative volume, technical indicators, and news sentiment
+- Paper trading portfolio starting at `$1,000`
+- Buy/sell paper trades using real quotes only
+- Trade history and open-position tracking
+- Settings for API keys and risk management
 
-The research agent lives in:
+## Important Disclaimer
 
-```text
-lib/researchAgent.ts
-```
-
-It studies:
-
-- Price trend
-- Volume signal
-- 5-period and 20-period moving averages
-- RSI
-- MACD
-- Placeholder news sentiment
-- Risk/reward
-
-The generated idea is a research artifact for simulated paper trading only. It does not guarantee profit.
-
-## Market Data Provider
-
-The Polygon provider lives in:
-
-```text
-lib/mockMarket.ts
-```
-
-Despite the legacy filename, this file requires Polygon data and throws an error when:
-
-- `POLYGON_API_KEY` is missing
-- Polygon rejects the request
-- No provider-backed bars are available
-- Freshness rules reject stale minute data
-
-Do not add brokerage order placement. This project must remain paper trading only.
-
-## Deploying To Vercel
-
-1. Import the GitHub repository in Vercel.
-2. Keep the default Next.js build settings.
-3. Add `POLYGON_API_KEY`, `LIVE_DATA_MAX_AGE_MINUTES`, and `LIVE_DATA_STRICT` in Project Settings > Environment Variables.
-4. Redeploy.
-
-Note: JSON file storage is fine for demos and educational use. For a multi-user deployed app, replace it with a hosted database such as Vercel Postgres, Turso, Supabase, or another managed database.
-
-## Risk Disclaimer
-
-This software is an educational simulation and research dashboard. It is not financial advice, investment advice, a brokerage service, or a guarantee of returns. The 20% daily target is unrealistic for most real-world trading conditions and must not be treated as expected performance. All trades are fake-money simulations.
+This application is for research and paper trading only. It is not financial advice, investment advice, a brokerage service, or a guarantee of returns. Penny stocks are high-risk and highly volatile.
